@@ -5,7 +5,52 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <label for="wizards">Who's the best wizard?</label>
+    <input type="text" id="wizards" name="wizards">
 </div>
 
+<script>
+    // Get the wizard field
+let wizards = document.querySelector('#wizards');
+
+
+/**
+ * Create and render the datalist element
+ */
+function renderDatalist (data) {
+
+	// Create the datalist element
+	let datalist = document.createElement('datalist');
+	datalist.id = 'wizards-data';
+	wizards.setAttribute('list', datalist.id);
+
+	// Create fragment for option elements
+	let fragment = document.createDocumentFragment();
+
+	// Create list options
+	for (let wizard of data) {
+		let option = document.createElement('option');
+		option.textContent = wizard;
+		fragment.append(option);
+	}
+
+	// Add options to datalist
+	datalist.append(fragment);
+
+	// Inject into the DOM
+	wizards.after(datalist);
+
+}
+
+// Fetch the data and render the datalist element
+fetch('/wizards.json').then(function (response) {
+	if (response.ok) {
+		return response.json();
+	}
+	throw response;
+}).then(function (data) {
+	renderDatalist(data);
+}).catch(function (error) {
+	console.warn(error);
+});
+</script>
