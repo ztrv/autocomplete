@@ -10,19 +10,29 @@
 </div>
 
 <script>
-    // Get the wizard field
+    // Get the input field
 let wizards = document.querySelector('#wizards');
 
 
 /**
  * Create and render the datalist element
  */
-function renderDatalist (data) {
-
-	// Create the datalist element
-	let datalist = document.createElement('datalist');
-	datalist.id = 'wizards-data';
-	wizards.setAttribute('list', datalist.id);
+function renderDatalist (ctrl, data) {
+	// Use existing datalist element if there already is one
+	let datalist = document.querySelector('#'+ctrl.id + '-data');
+	
+	if (!datalist) {
+		// Create the datalist element
+        datalist = document.createElement('datalist');
+		// Link the datalist to the input control
+        datalist.id = ctrl.id + '-data';
+        ctrl.setAttribute('list', datalist.id);
+	}
+	else
+	{
+		// clear current datalist
+        datalist.innerHTML = '';
+	}
 
 	// Create fragment for option elements
 	let fragment = document.createDocumentFragment();
@@ -30,6 +40,7 @@ function renderDatalist (data) {
 	// Create list options
 	for (let wizard of data) {
 		let option = document.createElement('option');
+
 		option.textContent = wizard;
 		fragment.append(option);
 	}
@@ -38,18 +49,25 @@ function renderDatalist (data) {
 	datalist.append(fragment);
 
 	// Inject into the DOM
-	wizards.after(datalist);
-
+    ctrl.after(datalist);
 }
 
 // Fetch the data and render the datalist element
-fetch('/wizards.json').then(function (response) {
+	fetch('/index?handler=Partial', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+			'Content-Type': 'application/json',
+          //  RequestVerificationToken: document.getElementsByName("__RequestVerificationToken")[0].value,
+        },
+        body: JSON.stringify('Textual content')
+		}).then(function (response) {
 	if (response.ok) {
 		return response.json();
 	}
 	throw response;
 }).then(function (data) {
-	renderDatalist(data);
+    renderDatalist(wizards, data);
 }).catch(function (error) {
 	console.warn(error);
 });
