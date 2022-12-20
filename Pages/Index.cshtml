@@ -6,7 +6,7 @@
 
 <div class="text-center">
     <label for="wizards">Who's the best wizard?</label>
-    <input type="text" id="wizards" name="wizards">
+    <input type="text" id="wizards" name="wizards" ajax-url="/index?handler=Partial">
 </div>
 
 <script>
@@ -38,10 +38,10 @@ function renderDatalist (ctrl, data) {
 	let fragment = document.createDocumentFragment();
 
 	// Create list options
-	for (let wizard of data) {
+	for (let item of data) {
 		let option = document.createElement('option');
 
-		option.textContent = wizard;
+        option.textContent = item;
 		fragment.append(option);
 	}
 
@@ -52,23 +52,36 @@ function renderDatalist (ctrl, data) {
     ctrl.after(datalist);
 }
 
-// Fetch the data and render the datalist element
-	fetch('/index?handler=Partial', {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-			'Content-Type': 'application/json',
-          //  RequestVerificationToken: document.getElementsByName("__RequestVerificationToken")[0].value,
-        },
-        body: JSON.stringify('Textual content')
-		}).then(function (response) {
-	if (response.ok) {
-		return response.json();
-	}
-	throw response;
-}).then(function (data) {
-    renderDatalist(wizards, data);
-}).catch(function (error) {
-	console.warn(error);
-});
+	// Add an event handler for when text is being entered
+    wizards.addEventListener('input', function (e) {
+		// Clear any pending timeout as it did not expire before another change
+		if (e.target.timeout)
+			clearTimeout(wizards.timeout);
+
+		// Only do an ajax search if at least 2 characters were entered
+        if (e.target.value.length > 2) {
+			// Wait 500ms in case user is still typing to avoid too many sequential calls
+            e.target.timeout = setTimeout(function () {
+				// Fetch the data and render the datalist element
+				fetch(e.target.getAttribute('ajax-url'), {
+					method: 'POST',
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json',
+						//  RequestVerificationToken: document.getElementsByName("__RequestVerificationToken")[0].value,
+					},
+                    body: JSON.stringify(e.target.value)
+				}).then(function (response) {
+					if (response.ok) {
+						return response.json();
+					}
+					throw response;
+				}).then(function (data) {
+                    renderDatalist(e.target, data);
+				}).catch(function (error) {
+					console.warn(error);
+				});
+			}, 500);
+		}
+	});
 </script>
