@@ -1,0 +1,103 @@
+﻿
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+
+public class DataExportComponent<T>
+{
+    private static string _tableName;
+    private static PropertyInfo[] _properties;
+
+    static DataExportComponent()
+    {
+        //using Reflection to identify all the columns (properties) of my table (entity)
+        Type type = typeof(T);
+        _tableName = type.Name;
+        _properties = type.GetProperties();
+    }
+
+public void Export(string path, List<T> entities)
+{
+    //Create a new spreadsheet file
+    //path is the Excel file location and name
+    //My path is C:\temp\OpenXML\contacts.xlsx
+    using (SpreadsheetDocument spreadsheet =
+        SpreadsheetDocument.Create(path,
+        SpreadsheetDocumentType.Workbook))
+    {
+        WorkbookPart workbookPart = spreadsheet.AddWorkbookPart();
+        workbookPart.Workbook = new Workbook();
+
+        WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+        SheetData sheetData = new SheetData();
+        Sheets sheets = new Sheets();
+        Sheet sheet = new Sheet();
+        sheet.Id = spreadsheet.WorkbookPart.GetIdOfPart(worksheetPart);
+        sheet.SheetId = 1; //sheet Id, anything but unique
+        sheet.Name = _tableName; //sheet name
+        sheets.Append(sheet);
+//loop row by row depending on the List count
+for (int i = 0; i < entities.Count; i++)
+{
+    Row row = new Row();
+    row.RowIndex = (uint)i+1; //RowIndex must be start with 1, since i = 0
+
+    //loop column by column depending on the entity properties
+    for (int column = 0; column < _properties.Count(); column++)
+    {
+        Cell cell = new Cell();
+        //Cell Reference is the Excel row and column index,
+        //For example:
+        //First row first column: A1
+        //Fifth row thrid column: C5
+        cell.CellReference = CreateCellReference(column+1) + row.RowIndex.ToString();
+                      
+        cell.DataType = CellValues.InlineString;
+                           
+        InlineString inlineString = new InlineString();
+        Text text = new Text();
+        text.Text = _properties[column].GetValue(entities[i]).ToString();
+        inlineString.Text = text; //The value you want to put into cell
+        cell.AppendChild(inlineString);
+
+        //Keep appending cell (column) into the same row
+        row.AppendChild(cell);
+    }
+                   
+    //Keep appending row into the data sheet
+    sheetData.Append(row);
+}
+
+worksheetPart.Worksheet = new Worksheet(sheetData);
+
+spreadsheet.WorkbookPart.Workbook.AppendChild<Sheets>(sheets);
+workbookPart.Workbook.Save();
+
+spreadsheet.Close();
+
+
+private string CreateCellReference(int column)
+{
+    string result = string.Empty;
+    //First is A
+    //After Z, is AA
+    //After ZZ, is AAA
+    char firstRef = 'A';
+    uint firstIndex = (uint)firstRef;
+    int mod = 0;
+
+    while (column > 0)
+    {
+        mod = (column - 1) % 26;
+        result += (char)(firstIndex + mod);
+        column = (column - mod) / 26;
+    }
+
+    return result;
+}
+
+ContactDAC dac = new ContactDAC();
+List<Contact> entities = dac.Select();
+
+DataExportComponent<Contact> com = new DataExportComponent<Contact>();
+com.Export(@"C:\temp\OpenXML\contacts.xlsx", entities);
